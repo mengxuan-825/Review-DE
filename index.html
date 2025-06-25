@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>單字複習器</title>
+  <title>單字複習器（隨機順序 + 重複錯題）</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
     .card { margin-top: 20px; font-size: 24px; }
@@ -22,50 +22,62 @@
   </div>
 
   <script>
-    let cards = [];
-    let current = 0;
+    let allCards = [];    // 所有單字卡
+    let reviewList = [];  // 正在複習的卡片（含錯題）
+    let currentCard = null;
 
-    // ✅ 載入舊資料（網頁載入時）
+    // 讀取舊資料
     window.onload = () => {
       const saved = localStorage.getItem('vocab');
       if (saved) document.getElementById('wordInput').value = saved;
     };
 
+    // 洗牌函式（Fisher–Yates Shuffle）
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
     function startReview() {
       const rawInput = document.getElementById('wordInput').value.trim();
-      localStorage.setItem('vocab', rawInput); // ✅ 儲存輸入到 localStorage
+      localStorage.setItem('vocab', rawInput); // 儲存輸入
 
       const lines = rawInput.split('\n');
-      cards = lines.map(line => {
+      allCards = lines.map(line => {
         const [en, zh] = line.split('：');
         return { en: en.trim(), zh: zh.trim() };
       });
-      current = 0;
+
+      // 初始化複習清單並洗牌
+      reviewList = shuffle([...allCards]);
+      document.getElementById('questionArea').style.display = 'block';
+      document.getElementById('result').innerText = "";
       showQuestion();
     }
 
     function showQuestion() {
-      if (current >= cards.length) {
-        document.getElementById('questionText').innerText = "複習完畢！";
+      if (reviewList.length === 0) {
+        document.getElementById('questionText').innerText = "🎉 複習完畢！";
+        document.getElementById('answer').style.display = 'none';
         return;
       }
-      document.getElementById('questionArea').style.display = 'block';
-      document.getElementById('result').innerText = "";
-      document.getElementById('questionText').innerText = `請輸入「${cards[current].zh}」的德文：`;
+
+      currentCard = reviewList[0]; // 取出第一個
+      document.getElementById('questionText').innerText = `請輸入「${currentCard.zh}」的德文：`;
       document.getElementById('answer').value = "";
+      document.getElementById('answer').style.display = 'inline';
     }
 
     function checkAnswer() {
       const userAnswer = document.getElementById('answer').value.trim().toLowerCase();
-      const correct = cards[current].en.toLowerCase();
+      const correct = currentCard.en.toLowerCase();
+
       if (userAnswer === correct) {
         document.getElementById('result').innerText = "✅ 正確！";
+        reviewList.shift(); // 移除這題
       } else {
-        document.getElementById('result').innerText = `❌ 錯了，正確答案是：${cards[current].en}`;
-      }
-      current++;
-      setTimeout(showQuestion, 1500);
-    }
-  </script>
-</body>
-</html>
+        document.getElementById('result').innerText = `❌ 錯了，正確答案是：${currentCard.en}`;
+        /
