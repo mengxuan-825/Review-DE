@@ -11,7 +11,7 @@
 </head>
 <body>
   <h1>單字複習器</h1>
-  <textarea id="wordInput" placeholder="請輸入單字，每行一組：英文：中文" rows="6" cols="30"></textarea><br>
+  <textarea id="wordInput" placeholder="請輸入單字，每行一組：德文：中文" rows="6" cols="30"></textarea><br>
   <button onclick="startReview()">開始複習</button>
 
   <div class="card" id="questionArea" style="display:none;">
@@ -51,7 +51,7 @@
       }
       document.getElementById('questionArea').style.display = 'block';
       document.getElementById('result').innerText = "";
-      document.getElementById('questionText').innerText = `請輸入「${cards[current].zh}」的英文：`;
+      document.getElementById('questionText').innerText = `請輸入「${cards[current].zh}」的德文：`;
       document.getElementById('answer').value = "";
     }
 
