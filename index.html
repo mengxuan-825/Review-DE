@@ -25,8 +25,16 @@
     let cards = [];
     let current = 0;
 
+    // ✅ 載入舊資料（網頁載入時）
+    window.onload = () => {
+      const saved = localStorage.getItem('vocab');
+      if (saved) document.getElementById('wordInput').value = saved;
+    };
+
     function startReview() {
       const rawInput = document.getElementById('wordInput').value.trim();
+      localStorage.setItem('vocab', rawInput); // ✅ 儲存輸入到 localStorage
+
       const lines = rawInput.split('\n');
       cards = lines.map(line => {
         const [en, zh] = line.split('：');
@@ -61,15 +69,3 @@
   </script>
 </body>
 </html>
-// 載入舊資料
-window.onload = () => {
-  const saved = localStorage.getItem('vocab');
-  if (saved) document.getElementById('wordInput').value = saved;
-};
-
-// 儲存新資料
-function startReview() {
-  const rawInput = document.getElementById('wordInput').value.trim();
-  localStorage.setItem('vocab', rawInput); // 存進 localStorage
-  ...
-}
