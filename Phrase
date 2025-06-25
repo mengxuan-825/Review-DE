@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>單字複習器</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .card { margin-top: 20px; font-size: 24px; }
+    #answer { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>單字複習器</h1>
+  <textarea id="wordInput" placeholder="請輸入單字，每行一組：英文：中文" rows="6" cols="30"></textarea><br>
+  <button onclick="startReview()">開始複習</button>
+
+  <div class="card" id="questionArea" style="display:none;">
+    <p id="questionText"></p>
+    <input id="answer" placeholder="輸入答案" />
+    <button onclick="checkAnswer()">檢查</button>
+    <p id="result"></p>
+  </div>
+
+  <script>
+    let cards = [];
+    let current = 0;
+
+    function startReview() {
+      const rawInput = document.getElementById('wordInput').value.trim();
+      const lines = rawInput.split('\n');
+      cards = lines.map(line => {
+        const [en, zh] = line.split('：');
+        return { en: en.trim(), zh: zh.trim() };
+      });
+      current = 0;
+      showQuestion();
+    }
+
+    function showQuestion() {
+      if (current >= cards.length) {
+        document.getElementById('questionText').innerText = "複習完畢！";
+        return;
+      }
+      document.getElementById('questionArea').style.display = 'block';
+      document.getElementById('result').innerText = "";
+      document.getElementById('questionText').innerText = `請輸入「${cards[current].zh}」的英文：`;
+      document.getElementById('answer').value = "";
+    }
+
+    function checkAnswer() {
+      const userAnswer = document.getElementById('answer').value.trim().toLowerCase();
+      const correct = cards[current].en.toLowerCase();
+      if (userAnswer === correct) {
+        document.getElementById('result').innerText = "✅ 正確！";
+      } else {
+        document.getElementById('result').innerText = `❌ 錯了，正確答案是：${cards[current].en}`;
+      }
+      current++;
+      setTimeout(showQuestion, 1500);
+    }
+  </script>
+</body>
+</html>
+// 載入舊資料
+window.onload = () => {
+  const saved = localStorage.getItem('vocab');
+  if (saved) document.getElementById('wordInput').value = saved;
+};
+
+// 儲存新資料
+function startReview() {
+  const rawInput = document.getElementById('wordInput').value.trim();
+  localStorage.setItem('vocab', rawInput); // 存進 localStorage
+  ...
+}
