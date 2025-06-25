@@ -2,82 +2,203 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>單字複習器（隨機順序 + 重複錯題）</title>
+  <title>德中單字複習器（選擇題 + 即時顯示錯題）</title>
   <style>
     body { font-family: sans-serif; padding: 20px; }
-    .card { margin-top: 20px; font-size: 24px; }
-    #answer { margin-top: 10px; }
+    .card { margin-top: 20px; font-size: 20px; }
+    #answer, #choiceArea { margin-top: 10px; }
+    button { margin-top: 10px; }
+    #choiceArea button { margin: 3px; }
+    #wrongList {
+      margin-top: 30px;
+      padding: 10px;
+      border-top: 2px solid #ccc;
+    }
+    #wrongList h2 {
+      margin-top: 0;
+    }
+    #wrongList ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    #wrongList li {
+      padding: 4px 0;
+      color: red;
+    }
   </style>
 </head>
 <body>
-  <h1>單字複習器</h1>
-  <textarea id="wordInput" placeholder="請輸入單字，每行一組：德文：中文" rows="6" cols="30"></textarea><br>
+  <h1>德中單字複習器</h1>
+  <textarea id="wordInput" placeholder="請輸入單字，每行一組：德文：中文" rows="8" cols="40"></textarea><br>
+
   <button onclick="startReview()">開始複習</button>
+  <button onclick="toggleMode()">切換模式（目前：自由輸入）</button>
+  <button onclick="clearWrong()">清空錯題列表</button>
 
   <div class="card" id="questionArea" style="display:none;">
     <p id="questionText"></p>
-    <input id="answer" placeholder="輸入答案" />
+    <input id="answer" placeholder="輸入德文答案" style="display:inline;" />
+    <div id="choiceArea" style="display:none;"></div>
     <button onclick="checkAnswer()">檢查</button>
     <p id="result"></p>
   </div>
 
-  <script>
-    let allCards = [];    // 所有單字卡
-    let reviewList = [];  // 正在複習的卡片（含錯題）
-    let currentCard = null;
+  <div id="wrongList" style="display:none;">
+    <h2>錯題清單（答錯過的單字）</h2>
+    <ul id="wrongItems"></ul>
+  </div>
 
-    // 讀取舊資料
-    window.onload = () => {
-      const saved = localStorage.getItem('vocab');
-      if (saved) document.getElementById('wordInput').value = saved;
-    };
+<script>
+  let allCards = [];
+  let reviewList = [];
+  let wrongCards = [];
+  let currentCard = null;
+  let isMultipleChoice = false;
 
-    // 洗牌函式（Fisher–Yates Shuffle）
-    function shuffle(array) {
-      for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
+  window.onload = () => {
+    const saved = localStorage.getItem('vocab');
+    if (saved) document.getElementById('wordInput').value = saved;
+  };
+
+  function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  function startReview() {
+    const rawInput = document.getElementById('wordInput').value.trim();
+    if (!rawInput) {
+      alert("請先輸入單字！");
+      return;
+    }
+    localStorage.setItem('vocab', rawInput);
+
+    const lines = rawInput.split('\n');
+    allCards = lines.map(line => {
+      const [de, zh] = line.split('：');
+      return { de: de.trim(), zh: zh.trim() };
+    });
+
+    reviewList = shuffle([...allCards]);
+    wrongCards = [];
+    updateWrongList();
+    document.getElementById('questionArea').style.display = 'block';
+    document.getElementById('result').innerText = "";
+    showQuestion();
+  }
+
+  function toggleMode() {
+    isMultipleChoice = !isMultipleChoice;
+    document.getElementById('answer').value = "";
+    document.getElementById('result').innerText = "";
+    if (isMultipleChoice) {
+      document.getElementById('choiceArea').style.display = 'block';
+      document.getElementById('answer').style.display = 'none';
+      alert('已切換到選擇題模式');
+    } else {
+      document.getElementById('choiceArea').style.display = 'none';
+      document.getElementById('answer').style.display = 'inline';
+      alert('已切換到自由輸入模式');
+    }
+    if (reviewList.length > 0) showQuestion();
+  }
+
+  function showQuestion() {
+    if (reviewList.length === 0) {
+      document.getElementById('questionText').innerText = "🎉 複習完畢！";
+      document.getElementById('answer').style.display = 'none';
+      document.getElementById('choiceArea').style.display = 'none';
+      return;
     }
 
-    function startReview() {
-      const rawInput = document.getElementById('wordInput').value.trim();
-      localStorage.setItem('vocab', rawInput); // 儲存輸入
-
-      const lines = rawInput.split('\n');
-      allCards = lines.map(line => {
-        const [en, zh] = line.split('：');
-        return { en: en.trim(), zh: zh.trim() };
-      });
-
-      // 初始化複習清單並洗牌
-      reviewList = shuffle([...allCards]);
-      document.getElementById('questionArea').style.display = 'block';
-      document.getElementById('result').innerText = "";
-      showQuestion();
-    }
-
-    function showQuestion() {
-      if (reviewList.length === 0) {
-        document.getElementById('questionText').innerText = "🎉 複習完畢！";
-        document.getElementById('answer').style.display = 'none';
-        return;
-      }
-
-      currentCard = reviewList[0]; // 取出第一個
-      document.getElementById('questionText').innerText = `請輸入「${currentCard.zh}」的德文：`;
+    currentCard = reviewList[0];
+    document.getElementById('questionText').innerText = `請輸入「${currentCard.zh}」的德文：`;
+    document.getElementById('result').innerText = "";
+    if (isMultipleChoice) {
+      showChoices();
+    } else {
       document.getElementById('answer').value = "";
       document.getElementById('answer').style.display = 'inline';
+      document.getElementById('choiceArea').style.display = 'none';
+    }
+  }
+
+  function showChoices() {
+    const choiceArea = document.getElementById('choiceArea');
+    choiceArea.innerHTML = '';
+
+    let choices = [currentCard.de];
+    const wrongs = allCards.filter(c => c.de !== currentCard.de);
+    shuffle(wrongs);
+    for (let i = 0; i < 3 && i < wrongs.length; i++) {
+      choices.push(wrongs[i].de);
+    }
+    shuffle(choices);
+
+    choices.forEach(choice => {
+      const btn = document.createElement('button');
+      btn.textContent = choice;
+      btn.onclick = () => {
+        document.getElementById('answer').value = choice;
+      };
+      choiceArea.appendChild(btn);
+    });
+
+    choiceArea.style.display = 'block';
+    document.getElementById('answer').style.display = 'none';
+  }
+
+  function checkAnswer() {
+    let userAnswer;
+    if (isMultipleChoice) {
+      userAnswer = document.getElementById('answer').value.trim();
+      if (!userAnswer) {
+        alert('請先從選項按鈕選擇答案');
+        return;
+      }
+    } else {
+      userAnswer = document.getElementById('answer').value.trim();
     }
 
-    function checkAnswer() {
-      const userAnswer = document.getElementById('answer').value.trim().toLowerCase();
-      const correct = currentCard.en.toLowerCase();
+    const correct = currentCard.de;
 
-      if (userAnswer === correct) {
-        document.getElementById('result').innerText = "✅ 正確！";
-        reviewList.shift(); // 移除這題
-      } else {
-        document.getElementById('result').innerText = `❌ 錯了，正確答案是：${currentCard.en}`;
-        /
+    if (userAnswer.toLowerCase() === correct.toLowerCase()) {
+      document.getElementById('result').innerText = "✅ 正確！";
+      reviewList.shift();
+    } else {
+      document.getElementById('result').innerText = `❌ 錯了，正確答案是：${correct}`;
+      if (!wrongCards.find(c => c.de === currentCard.de)) {
+        wrongCards.push(currentCard);
+        updateWrongList();
+      }
+      reviewList.push(reviewList.shift());
+    }
+
+    setTimeout(() => {
+      document.getElementById('result').innerText = "";
+      showQuestion();
+    }, 1400);
+  }
+
+  function updateWrongList() {
+    const wrongDiv = document.getElementById('wrongList');
+    const ul = document.getElementById('wrongItems');
+    if (wrongCards.length === 0) {
+      wrongDiv.style.display = 'none';
+      ul.innerHTML = '';
+    } else {
+      wrongDiv.style.display = 'block';
+      ul.innerHTML = wrongCards.map(c => `<li>${c.de} ： ${c.zh}</li>`).join('');
+    }
+  }
+
+  function clearWrong() {
+    wrongCards = [];
+    updateWrongList();
+  }
+</script>
+</body>
+</html>
